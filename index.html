@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="おかえりチェック">
+<meta name="theme-color" content="#FF6B6B">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>おかえりチェック</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap');
+
+  :root {
+    --bg: #FFF8F0;
+    --primary: #FF6B6B;
+    --primary-light: #FFD6D6;
+    --accent: #FFB347;
+    --success: #5CB85C;
+    --text: #3A2E2E;
+    --card: #FFFFFF;
+    --shadow: rgba(255,107,107,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    color: var(--text);
+    padding-bottom: 40px;
+    overscroll-behavior: none;
+  }
+
+  header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+    padding: env(safe-area-inset-top, 16px) 20px 24px;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 20px);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -20px; left: -20px;
+    width: 80px; height: 80px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+  }
+  header h1 {
+    font-size: 24px;
+    font-weight: 900;
+    color: white;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    position: relative;
+  }
+  header .subtitle {
+    font-size: 13px;
+    color: rgba(255,255,255,0.85);
+    margin-top: 4px;
+    position: relative;
+  }
+
+  .progress-section {
+    padding: 16px 16px 0;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 8px;
+  }
+  .progress-bar-bg {
+    background: #FFE0E0;
+    border-radius: 20px;
+    height: 14px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    border-radius: 20px;
+    transition: width 0.4s cubic-bezier(.4,0,.2,1);
+    width: 0%;
+  }
+
+  .container {
+    padding: 0 16px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .check-item {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 3px 12px var(--shadow);
+    transition: all 0.25s ease;
+    border: 2px solid transparent;
+  }
+  .check-item.done {
+    background: #F0FFF0;
+    border-color: #A8E6A8;
+    opacity: 0.75;
+  }
+  .check-item.done .item-text {
+    text-decoration: line-through;
+    color: #888;
+  }
+
+  .checkbox {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: 2.5px solid var(--primary);
+    background: white;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    font-size: 16px;
+    user-select: none;
+  }
+  .check-item.done .checkbox {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+  }
+
+  .item-text {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.4;
+    transition: all 0.2s;
+  }
+
+  .item-edit-input {
+    flex: 1;
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text);
+    border-bottom: 2px solid var(--accent);
+    padding: 2px 0;
+  }
+
+  .delete-btn {
+    background: none;
+    border: none;
+    color: #FFAAAA;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 8px;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+  .delete-btn:active { color: var(--primary); }
+
+  .section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #AAA;
+    letter-spacing: 1.5px;
+    margin: 20px 0 8px 4px;
+  }
+
+  .add-form {
+    background: white;
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 3px 12px var(--shadow);
+    margin-top: 10px;
+    border: 2px dashed var(--accent);
+  }
+  .add-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-size: 15px;
+    background: transparent;
+    color: var(--text);
+  }
+  .add-input::placeholder { color: #CCC; }
+  .add-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 50%;
+    width: 34px; height: 34px;
+    font-size: 22px;
+    color: white;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  .add-btn:active { transform: scale(0.9); }
+
+  .complete-banner {
+    display: none;
+    background: linear-gradient(135deg, #5CB85C, #8BC34A);
+    color: white;
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 16px;
+    box-shadow: 0 4px 16px rgba(92,184,92,0.3);
+    animation: pop 0.3s ease;
+  }
+  @keyframes pop {
+    0% { transform: scale(0.9); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .actions {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .btn-main {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 16px;
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 1px;
+  }
+  .btn-main:active { transform: scale(0.97); }
+
+  .btn-pdf {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    box-shadow: 0 4px 16px rgba(255,107,107,0.35);
+  }
+  .btn-reset {
+    background: white;
+    color: #AAA;
+    border: 2px solid #EEE;
+    font-size: 14px;
+  }
+
+  /* install banner */
+  .install-banner {
+    display: none;
+    background: #fff;
+    border: 2px solid var(--accent);
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text);
+    text-align: center;
+    box-shadow: 0 2px 8px var(--shadow);
+  }
+  .install-banner button {
+    margin-top: 8px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 20px;
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏠 おかえりチェック</h1>
+  <div class="subtitle">帰ったらこれをやろう！</div>
+</header>
+
+<div class="progress-section">
+  <div class="progress-label">
+    <span>進捗</span>
+    <span id="progress-text">0 / 0</span>
+  </div>
+  <div class="progress-bar-bg">
+    <div class="progress-bar-fill" id="progress-bar"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="section-title">📋 やることリスト</div>
+  <div class="checklist" id="checklist"></div>
+
+  <div class="add-form">
+    <span style="font-size:20px;">➕</span>
+    <input class="add-input" id="add-input" type="text" placeholder="新しい項目を追加..." maxlength="40">
+    <button class="add-btn" onclick="addItem()">＋</button>
+  </div>
+
+  <div class="complete-banner" id="complete-banner">
+    🎉 全部できた！えらい！
+  </div>
+
+  <div class="install-banner" id="install-banner">
+    📲 ホーム画面に追加すると<br>アプリとして使えます！
+    <br><button onclick="installApp()">ホーム画面に追加</button>
+  </div>
+
+  <div class="actions">
+    <button class="btn-main btn-pdf" onclick="generatePDF()">📄 レポートをPDFで保存</button>
+    <button class="btn-main btn-reset" onclick="resetAll()">🔄 チェックをリセット</button>
+  </div>
+</div>
+
+<script>
+// Service Worker 登録
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+
+// PWAインストールプロンプト
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').style.display = 'block';
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').style.display = 'none';
+});
+function installApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+  }
+}
+
+// --- チェックリスト本体 ---
+const DEFAULT_ITEMS = [
+  'コーヒーのペットボトルを捨てる',
+  'ポテチの袋を片付ける',
+  '脱いだものを片付ける',
+  '制服をカバンから出す',
+  '水筒をカバンから出す',
+  '散らかしたものを全体的に片付ける',
+];
+
+let items = [];
+
+function loadItems() {
+  const saved = localStorage.getItem('checklist_items');
+  if (saved) {
+    items = JSON.parse(saved);
+  } else {
+    items = DEFAULT_ITEMS.map((text, i) => ({ id: i, text, done: false }));
+  }
+}
+
+function saveItems() {
+  localStorage.setItem('checklist_items', JSON.stringify(items));
+}
+
+function render() {
+  const list = document.getElementById('checklist');
+  list.innerHTML = '';
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'check-item' + (item.done ? ' done' : '');
+    div.innerHTML = `
+      <div class="checkbox" onclick="toggleItem(${item.id})">${item.done ? '✓' : ''}</div>
+      <span class="item-text" ondblclick="startEdit(${item.id}, this)">${item.text}</span>
+      <button class="delete-btn" onclick="deleteItem(${item.id})">✕</button>
+    `;
+    list.appendChild(div);
+  });
+  updateProgress();
+}
+
+function updateProgress() {
+  const done = items.filter(i => i.done).length;
+  const total = items.length;
+  document.getElementById('progress-text').textContent = `${done} / ${total}`;
+  const pct = total === 0 ? 0 : (done / total) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('complete-banner').style.display =
+    (total > 0 && done === total) ? 'block' : 'none';
+}
+
+function toggleItem(id) {
+  const item = items.find(i => i.id === id);
+  if (item) item.done = !item.done;
+  saveItems(); render();
+}
+
+function deleteItem(id) {
+  items = items.filter(i => i.id !== id);
+  saveItems(); render();
+}
+
+function startEdit(id, el) {
+  const item = items.find(i => i.id === id);
+  if (!item || item.done) return;
+  const input = document.createElement('input');
+  input.className = 'item-edit-input';
+  input.value = item.text;
+  el.replaceWith(input);
+  input.focus(); input.select();
+  const finish = () => {
+    const val = input.value.trim();
+    if (val) item.text = val;
+    saveItems(); render();
+  };
+  input.addEventListener('blur', finish);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') finish(); });
+}
+
+function addItem() {
+  const input = document.getElementById('add-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const newId = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 0;
+  items.push({ id: newId, text, done: false });
+  input.value = '';
+  saveItems(); render();
+}
+
+document.getElementById('add-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addItem();
+});
+
+function resetAll() {
+  if (!confirm('チェックをリセットしますか？')) return;
+  items.forEach(i => i.done = false);
+  saveItems(); render();
+}
+
+async function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ja-JP') + ' ' + now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  const done = items.filter(i => i.done).length;
+  const total = items.length;
+
+  doc.setFillColor(255, 107, 107);
+  doc.roundedRect(10, 10, 190, 30, 6, 6, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Okaeri Check Report', 105, 22, { align: 'center' });
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(dateStr + '  |  ' + done + ' / ' + total + ' completed', 105, 32, { align: 'center' });
+
+  doc.setFillColor(255, 220, 220);
+  doc.roundedRect(10, 46, 190, 8, 4, 4, 'F');
+  if (total > 0) {
+    doc.setFillColor(255, 107, 107);
+    doc.roundedRect(10, 46, 190 * (done / total), 8, 4, 4, 'F');
+  }
+
+  let y = 64;
+  items.forEach(item => {
+    if (y > 270) { doc.addPage(); y = 20; }
+    doc.setFillColor(item.done ? 240 : 255, 255, item.done ? 240 : 255);
+    doc.roundedRect(10, y - 5, 190, 12, 3, 3, 'F');
+    if (item.done) {
+      doc.setDrawColor(92, 184, 92); doc.setFillColor(92, 184, 92);
+    } else {
+      doc.setDrawColor(255, 107, 107); doc.setFillColor(255, 255, 255);
+    }
+    doc.circle(22, y + 1, 4, 'FD');
+    if (item.done) { doc.setTextColor(255,255,255); doc.setFontSize(10); doc.text('v', 22, y+1.5, {align:'center'}); }
+    doc.setTextColor(item.done ? 100 : 58, item.done ? 100 : 46, item.done ? 100 : 46);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', item.done ? 'normal' : 'bold');
+    doc.text(item.text, 30, y + 2);
+    y += 14;
+  });
+
+  doc.setTextColor(180, 180, 180);
+  doc.setFontSize(9);
+  doc.text('Generated by Okaeri Check App', 105, 287, { align: 'center' });
+  doc.save('okaeri-check-' + now.toISOString().slice(0,10) + '.pdf');
+}
+
+loadItems();
+render();
+</script>
+</body>
+</html>
